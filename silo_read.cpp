@@ -329,8 +329,8 @@ int main(int argc, char* argv[]) {
 			printf("%i %e %e %e %e %e\n", i, reff[i], rho[i], menc[i], venc[i], ncell[i]);
 	}
 
-	double Rmax = 1.25 * 1.00E+9;
-	int mbins = nbins * Rmax / (reff[nbins - 1])+1;
+	double Rmax = 30.0 * lcon;
+	int mbins = nbins;
 //	double Rmax = 2.0 * reff[nbins - 1];
 	double dR = Rmax / mbins;
 	std::vector<double> mcell(mbins, 0.0);
