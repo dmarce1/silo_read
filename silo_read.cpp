@@ -15,23 +15,31 @@
 #include <algorithm>
 #include <limits>
 #include <vector>
+#include "libeos.hpp"
 #include <valarray>
+#include <set>
+#include <limits>
+#include <map>
 
-char const* field_names[] = { "rho", "egas", "sx", "sy", "sz", "tau", "pot", "zx", "zy", "zz", "primary_core", "primary_envelope", "secondary_core",
-		"secondary_envelope", "vacuum", "phi", "gx", "gy", "gz", "vx", "vy", "vz", "eint", "zzs", "roche" };
+char const* field_names[] = { "rho", "egas", "sx", "sy", "sz", "tau", "pot",
+		"zx", "zy", "zz", "primary_core", "primary_envelope", "secondary_core",
+		"secondary_envelope", "vacuum", "phi", "gx", "gy", "gz", "vx", "vy",
+		"vz", "eint", "zzs", "roche" };
 
 //char const* elements[] = { "h", "he3", "he4", "c12", "n14", "o16", "ne20", "mg24" };
 
 #define NELE 19
 
 //h1	he3	he4	c12	n14	o16	ne20	mg24	si28	s32	ar36	ca40	ti44	cr48	cr56	fe52	fe54	fe56	ni56
-const double A[] = { 1.0, 3.0, 4.0, 12.0, 14.0, 16.0, 20.0, 24.0, 28.0, 32.0, 36.0, 40.0, 44.0, 48.0, 56.0, 52.0, 54.0, 56.0, 56.0 };
-const double Z[] = { 1.0, 2.0, 2.0, 6.00, 7.00, 8.00, 10.0, 12.0, 14.0, 16.0, 18.0, 20.0, 22.0, 24.0, 24.0, 26.0, 26.0, 26.0, 28.0 };
+const double A[] = { 1.0, 3.0, 4.0, 12.0, 14.0, 16.0, 20.0, 24.0, 28.0, 32.0,
+		36.0, 40.0, 44.0, 48.0, 56.0, 52.0, 54.0, 56.0, 56.0 };
+const double Z[] = { 1.0, 2.0, 2.0, 6.00, 7.00, 8.00, 10.0, 12.0, 14.0, 16.0,
+		18.0, 20.0, 22.0, 24.0, 24.0, 26.0, 26.0, 26.0, 28.0 };
 
-const double frac_fracs[3][21] = {
-		{ 0,0,0,0.5,0,0.5,0,0,0,0,0,0,0,0,0,0,0,0,0 }, //
-		{ 0,0,0,0.5,0,0.5,0,0,0,0,0,0,0,0,0,0,0,0,0 }, //
-		{ 0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 } //
+const double frac_fracs[3][21] = { { 0, 0, 0, 0.5, 0, 0.5, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0 }, //
+		{ 0, 0, 0, 0.5, 0, 0.5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, //
+		{ 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } //
 };
 
 constexpr auto rho_i = 0;
@@ -63,12 +71,12 @@ constexpr auto roche_i = 24;
 constexpr int NF = 25;
 constexpr int NVERTICES = 8;
 
-
 #include <fenv.h>
 
 int main(int argc, char* argv[]) {
-	int nbins = 1000;
 	int mincells = 100;
+
+	eos::set_eos_type(eos::WD, 5.0 / 3.0);
 
 //feenableexcept(FE_INVALID | FE_DIVBYZERO | FE_OVERFLOW);
 	std::vector<double> x, y, z, dx;
@@ -110,9 +118,9 @@ int main(int argc, char* argv[]) {
 	//mcon = 1;
 	//tcon = 2.04E+04;
 	//tcon = 1;
-        lcon = 5.915E9;
-        mcon = 1.99E33;
-        tcon = 39.47;
+	lcon = 5.915E9;
+	mcon = 1.99E33;
+	tcon = 39.47;
 	for (int i = 0; i < count; ++i) {
 		x[i] = 0.0;
 		y[i] = 0.0;
@@ -139,7 +147,7 @@ int main(int argc, char* argv[]) {
 	}
 	//fprintf(stderr, "Reading data\n");
 	for (int field = 0; field != NF; ++field) {
-	//	fprintf(stderr, "\rField #%i name: %s\n", field, field_names[field]);
+		//	fprintf(stderr, "\rField #%i name: %s\n", field, field_names[field]);
 		auto* ucd = DBGetUcdvar(db, field_names[field]);
 		vars[field].resize(count);
 		const double* array = reinterpret_cast<double*>(ucd->vals[0]);
@@ -158,8 +166,11 @@ int main(int argc, char* argv[]) {
 		vars[sx_i][i] *= mcon * lcon / tcon / (lcon * lcon * lcon);
 		vars[sy_i][i] *= mcon * lcon / tcon / (lcon * lcon * lcon);
 		vars[sz_i][i] *= mcon * lcon / tcon / (lcon * lcon * lcon);
-		vars[tau_i][i] *= std::pow(mcon * lcon * lcon / tcon / tcon / (lcon * lcon * lcon), 3.0 / 5.0);
-		vars[pot_i][i] *= mcon * lcon * lcon / tcon / tcon / (lcon * lcon * lcon);
+		vars[tau_i][i] *= std::pow(
+				mcon * lcon * lcon / tcon / tcon / (lcon * lcon * lcon),
+				3.0 / 5.0);
+		vars[pot_i][i] *= mcon * lcon * lcon / tcon / tcon
+				/ (lcon * lcon * lcon);
 		vars[eint_i][i] *= lcon * lcon / tcon / tcon;
 		for (int f = 0; f < 5; ++f) {
 			vars[primary_core_i + f][i] *= mcon / (lcon * lcon * lcon);
@@ -186,19 +197,35 @@ int main(int argc, char* argv[]) {
 		mtot += rho * dx3;
 	}
 	///fprintf( stderr, "mtot = %e\n", mtot);
-	double pmax = 0.0;
+
+	std::set<double> p_set;
+
 	for (int i = 0; i < count; i++) {
 		const double rho = vars[rho_i][i];
 		const double sx = vars[sx_i][i];
 		const double sy = vars[sy_i][i];
 		const double sz = vars[sz_i][i];
-		const double ek = 0.5 * (sx * sx + sy * sy + sz * sz) / rho;
 		const double ei = vars[eint_i][i];
-		const double p = (2. / 3.) * rho * ei;
-		pmax = std::max(pmax, p);
+		const double p = eos::pressure_de<double>(rho, vars[egas_i][i],
+				vars[tau_i][i], sx, sy, sz);//		pmax = std::max(pmax, p);
+		p_set.insert(std::max(p, 0.0));
 	}
 
-	double dp = pmax / nbins;
+	std::vector<double> p_bound;
+	p_bound.push_back(0.0);
+	int counter = 0;
+	int min_per_bin = 10000;
+	for (auto& this_p : p_set) {
+		counter++;
+		if (counter > min_per_bin) {
+			counter = 0;
+//			printf( "%i %e\n", p_bound.size(), this_p );
+			p_bound.push_back(this_p);
+		}
+	}
+	p_bound[p_bound.size() - 1] = std::numeric_limits<double>::max();
+	int nbins = p_bound.size();
+
 	std::vector<double> tau(nbins, 0.0);
 	std::vector<double> mmw(nbins, 0.0);
 	std::vector<double> vol(nbins, 0.0);
@@ -236,7 +263,17 @@ int main(int argc, char* argv[]) {
 	double sr_ub = 0.0;
 
 	double verr = 0.0, vnorm = 0.0;
+	auto pbound_map = std::map<double, int>();
+	int i = 0;
+	for (auto p : p_bound) {
+		pbound_map.insert(std::make_pair(p_bound[i], i));
+		i++;
+	}
+
+//	printf( "%i %i\n", pbound_set.size(), p_bound.size());
 	for (int i = 0; i < count; i++) {
+		printf("\r%5.2f", double(i) / count * 100.0);
+		fflush(stdout);
 		const double dx3 = dx[i] * dx[i] * dx[i];
 		const double rho = vars[rho_i][i];
 		const double dm = rho * dx3;
@@ -248,70 +285,74 @@ int main(int argc, char* argv[]) {
 		if (ek + phi > 0.0) {
 			munbound += dm;
 		}
-		const double ei = vars[eint_i][i];
-		const double p = (2. / 3.) * rho * ei;
-		int n = std::max(nbins - int(p / dp + 0.5), 0);
+		const double p = eos::pressure_de<double>(rho, vars[egas_i][i],
+				vars[tau_i][i], sx, sy, sz);//		pmax = std::max(pmax, p);
+//		int n = std::max(nbins - int(p / dp + 0.5), 0);
+				//int n = get_index(p);
+		//	printf( "%e %e %e\n", p, *pbound_set.begin(), *pbound_set.rbegin());
+		int n = nbins - pbound_map.upper_bound(p)->second - 1;
+		//	printf( "%i\n", n);
 		double mu1 = 1.151;
 		double mu2 = 0.629;
 		double mu3 = 0.599;
-		if (n < nbins) {
-			ncell[n]++;
+		//	if (n < nbins) {
+		ncell[n]++;
+		const auto dfrac1 = vars[primary_core_i][i] / rho;
+		const auto dfrac2 = vars[primary_envelope_i][i] / rho;
+		const auto dfrac3 = 1.0 - dfrac1 - dfrac2;
+		const auto mu = (dfrac1 / mu1 + dfrac2 / mu2 + dfrac3 / mu3);
+		mmw[n] += mu * dm;
+		mass[n] += dm;
+		menc[n] += dm;
+		tau[n] += vars[tau_i][i] * dx3;
+		vol[n] += dx3;
+		venc[n] += dx3;
+		for (int f = 0; f < NELE; f++) {
 			const auto dfrac1 = vars[primary_core_i][i] / rho;
 			const auto dfrac2 = vars[primary_envelope_i][i] / rho;
 			const auto dfrac3 = 1.0 - dfrac1 - dfrac2;
-			const auto mu = (dfrac1 / mu1 + dfrac2 / mu2 + dfrac3 / mu3);
-			mmw[n] += mu * dm;
-			mass[n] += dm;
-			menc[n] += dm;
-			tau[n] += vars[tau_i][i] * dx3;
-			vol[n] += dx3;
-			venc[n] += dx3;
-			for (int f = 0; f < NELE; f++) {
-				const auto dfrac1 = vars[primary_core_i][i] / rho;
-				const auto dfrac2 = vars[primary_envelope_i][i] / rho;
-				const auto dfrac3 = 1.0 - dfrac1 - dfrac2;
-				fracs[f][n] += frac_fracs[0][f] * dfrac1 * dm;
-				fracs[f][n] += frac_fracs[1][f] * dfrac2 * dm;
-				fracs[f][n] += frac_fracs[2][f] * dfrac3 * dm;
-			}
-			const double x0 = x[i] - cx;
-			const double y0 = y[i] - cy;
-			jeff[n] += (x0 * sy - y0 * sx) * dx3;
-			verr += vars[pot_i][i] / 2.0;
-			verr += 2.0 * ek;
-			verr += 3.0 * p;
-			vnorm += std::abs(vars[pot_i][i] / 2.0);
+			fracs[f][n] += frac_fracs[0][f] * dfrac1 * dm;
+			fracs[f][n] += frac_fracs[1][f] * dfrac2 * dm;
+			fracs[f][n] += frac_fracs[2][f] * dfrac3 * dm;
 		}
+		const double x0 = x[i] - cx;
+		const double y0 = y[i] - cy;
+		jeff[n] += (x0 * sy - y0 * sx) * dx3;
+		verr += vars[pot_i][i] / 2.0;
+		verr += 2.0 * ek;
+		verr += 3.0 * p;
+		vnorm += std::abs(vars[pot_i][i] / 2.0);
+		//	}
 	}
 	for (int i = 0; i < nbins; i++) {
-		if (ncell[i] < mincells && i != nbins - 1) {
-			compress(ncell, i);
-			compress(venc, i);
-			compress(menc, i);
-			compress(mass, i);
-			compress(vol, i);
-			compress(tau, i);
-			compress(mmw, i);
-			compress(jeff, i);
-			for (int f = 0; f < NELE; f++) {
-				compress(fracs[f], i);
-			}
-			nbins--;
-			i--;
-		} else {
-			double norm = 0.0;
-			for (int f = 0; f < NELE; f++) {
-				fracs[f][i] /= mass[i];
-				norm += fracs[f][i];
-			}
-			for (int f = 0; f < NELE; f++) {
-				fracs[f][i] /= norm;
-			}
-			tau[i] /= vol[i];
-			jeff[i] /= mass[i];
-			mmw[i] = mass[i] / mmw[i];
-			rho[i] = mass[i] / vol[i];
+//		if (ncell[i] < mincells && i != nbins - 1) {
+//			compress(ncell, i);
+//			compress(venc, i);
+//			compress(menc, i);
+//			compress(mass, i);
+//			compress(vol, i);
+//			compress(tau, i);
+//			compress(mmw, i);
+//			compress(jeff, i);
+//			for (int f = 0; f < NELE; f++) {
+//				compress(fracs[f], i);
+//			}
+//			nbins--;
+//			i--;
+//		} else {
+		double norm = 0.0;
+		for (int f = 0; f < NELE; f++) {
+			fracs[f][i] /= mass[i];
+			norm += fracs[f][i];
 		}
+		for (int f = 0; f < NELE; f++) {
+			fracs[f][i] /= norm;
+		}
+		tau[i] /= vol[i];
+		jeff[i] /= mass[i];
+		mmw[i] = mass[i] / mmw[i];
+		rho[i] = mass[i] / vol[i];
+		//	}
 	}
 	for (int i = 1; i < nbins; i++) {
 		menc[i] += menc[i - 1];
@@ -325,8 +366,8 @@ int main(int argc, char* argv[]) {
 	}
 	reff[0] /= 2.0;
 	for (int i = 0; i < nbins - 1; i++) {
-		if (ncell[i])
-			printf("%i %e %e %e %e %e\n", i, reff[i], rho[i], menc[i], venc[i], ncell[i]);
+		//	if (ncell[i])
+		//		printf("%i %e %e %e %e %e\n", i, reff[i], rho[i], menc[i], venc[i], ncell[i]);
 	}
 
 	double Rmax = 30.0 * lcon;
@@ -419,8 +460,14 @@ int main(int argc, char* argv[]) {
 		printf("%e\n", mmw[i]);
 		const double N = m / mmw[i] / mh;
 		const double E = std::pow(tau[i], 5. / 3.) * vol[i];
-		double S = (k * N / m) * (log(vol[i] / N * std::pow(4.0 * M_PI * mh * mmw[i] * E / N / 3. / h / h, 1.5)) + 5. / 2.);
-		const double T = std::pow(tau[i], 5. / 3.) / (1.5 * k) * mh * mmw[i] / rho[i];
+		double S = (k * N / m)
+				* (log(
+						vol[i] / N
+								* std::pow(
+										4.0 * M_PI * mh * mmw[i] * E / N / 3.
+												/ h / h, 1.5)) + 5. / 2.);
+		const double T = std::pow(tau[i], 5. / 3.) / (1.5 * k) * mh * mmw[i]
+				/ rho[i];
 		fprintf(fp_profile, "%13e %13e %13e %13e %13e", r, rho[i], T, J, m);
 		fprintf(fp_rho, "%13e %13e\n", q, rho[i]);
 		fprintf(fp_temp, "%13e %13e\n", q, T);
@@ -453,14 +500,16 @@ int main(int argc, char* argv[]) {
 	}
 	fclose(fp_ang_mom);
 
-	FILE* fp3 = fopen( "binary2.dat", "at");
-	fprintf( fp3, "%e %e %e\n", verr/vnorm, mtot, munbound );
-	fclose( fp3);
+	FILE* fp3 = fopen("binary2.dat", "at");
+	fprintf(fp3, "%e %e %e\n", verr / vnorm, mtot, munbound);
+	fclose(fp3);
 	//fprintf( stderr, "Virial Error = %e\n", verr / vnorm);
 	FILE* fp2 = fopen("data.txt", "at");
-	fprintf(fp2, "%e %e %e %e %e %e %e %e\n", verr/vnorm, mtot, munbound, sx_ub, sy_ub, sz_ub, sr_ub, r_ub);
+	fprintf(fp2, "%e %e %e %e %e %e %e %e\n", verr / vnorm, mtot, munbound,
+			sx_ub, sy_ub, sz_ub, sr_ub, r_ub);
 	fclose(fp2);
-	fprintf( stderr, "Mtot = %e Munbound = %e / %e\n", mtot, munbound, munbound / mtot);
+	fprintf( stderr, "Mtot = %e Munbound = %e / %e\n", mtot, munbound,
+			munbound / mtot);
 
 	return 0;
 }
