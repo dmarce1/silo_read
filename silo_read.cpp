@@ -292,15 +292,24 @@ int main(int argc, char* argv[]) {
 		//	printf( "%e %e %e\n", p, *pbound_set.begin(), *pbound_set.rbegin());
 		int n = nbins - pbound_map.upper_bound(p)->second - 1;
 		//	printf( "%i\n", n);
-		double mu1 = 1.151;
-		double mu2 = 0.629;
-		double mu3 = 0.599;
+	//	double mu1 = 1.151;
+	//	double mu2 = 0.629;
+	//	double mu3 = 0.599;
 		//	if (n < nbins) {
 		ncell[n]++;
 		const auto dfrac1 = vars[primary_core_i][i] / rho;
 		const auto dfrac2 = vars[primary_envelope_i][i] / rho;
 		const auto dfrac3 = 1.0 - dfrac1 - dfrac2;
-		const auto mu = (dfrac1 / mu1 + dfrac2 / mu2 + dfrac3 / mu3);
+		double mu = 0.0;
+
+		for (int f = 0; f < NELE; f++) {
+			mu += frac_fracs[0][f] * dfrac1 * (1.0 + Z[f])/ A[f];
+			mu += frac_fracs[1][f] * dfrac2 * (1.0 + Z[f])/ A[f];
+			mu += frac_fracs[2][f] * dfrac3 * (1.0 + Z[f])/ A[f];
+		}
+//		 mu = 1.0 / mu;
+//		 printf( " %e\n", mu);
+
 		mmw[n] += mu * dm;
 		mass[n] += dm;
 		menc[n] += dm;
@@ -308,9 +317,6 @@ int main(int argc, char* argv[]) {
 		vol[n] += dx3;
 		venc[n] += dx3;
 		for (int f = 0; f < NELE; f++) {
-			const auto dfrac1 = vars[primary_core_i][i] / rho;
-			const auto dfrac2 = vars[primary_envelope_i][i] / rho;
-			const auto dfrac3 = 1.0 - dfrac1 - dfrac2;
 			fracs[f][n] += frac_fracs[0][f] * dfrac1 * dm;
 			fracs[f][n] += frac_fracs[1][f] * dfrac2 * dm;
 			fracs[f][n] += frac_fracs[2][f] * dfrac3 * dm;
