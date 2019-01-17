@@ -19,7 +19,15 @@ public:
 	static T pressure_de(const T& d, const T& e, const T& tau, const T& ek);
 
 	template<class T>
-	static T pressure_de(const T& d, const T& e, const T& tau, const T& sx, const T& sy, const T& sz);
+	static T pressure_de(const T& d, const T& e, const T& tau, const T& sx,
+			const T& sy, const T& sz);
+
+	template<class T>
+	static T ein_de(const T& d, const T& e, const T& tau, const T& ek);
+
+	template<class T>
+	static T ein_de(const T& d, const T& e, const T& tau, const T& sx,
+			const T& sy, const T& sz);
 
 private:
 	static const double Acgs_;
@@ -42,7 +50,9 @@ T eos::pressure(const T& d, const T& e) {
 		p = (fgamma_ - T(1)) * e;
 	} else if (type_ == WD) {
 		const T x = pow(d / B_, T(1.0 / 3.0));
-		p = A_ * (x * (T(2) * x * x - T(3)) * sqrt(x * x + T(1)) + T(3) * asinh(x)) + (fgamma_ - T(1)) * e;
+		p = A_
+				* (x * (T(2) * x * x - T(3)) * sqrt(x * x + T(1))
+						+ T(3) * asinh(x)) + (fgamma_ - T(1)) * e;
 	} else {
 		std::cout << "libeos : unknown eos\n";
 		throw;
@@ -55,6 +65,13 @@ template<class T>
 T eos::pressure_de(const T& d, const T& egas, const T& tau, const T& ek) {
 
 	T ein = egas - ek;
+	if (type_ == WD) {
+		const T x = pow(d / B_, T(1.0 / 3.0));
+		ein -= A_
+				* (T(8) * x * x * x * (sqrt(x * x + T(1)) - T(1))
+						- (x * (T(2) * x * x - T(3)) * sqrt(x * x + T(1))
+								+ T(3) * asinh(x)));
+	}
 	if (ein < T(0.001) * egas) {
 		ein = pow(tau, fgamma_);
 	}
@@ -64,9 +81,35 @@ T eos::pressure_de(const T& d, const T& egas, const T& tau, const T& ek) {
 }
 
 template<class T>
-T eos::pressure_de(const T& d, const T& egas, const T& tau, const T& sx, const T& sy, const T& sz) {
+T eos::ein_de(const T& d, const T& egas, const T& tau, const T& ek) {
+
+	T ein = egas - ek;
+	if (type_ == WD) {
+		const T x = pow(d / B_, T(1.0 / 3.0));
+		ein -= A_
+				* (T(8) * x * x * x * (sqrt(x * x + T(1)) - T(1))
+						- (x * (T(2) * x * x - T(3)) * sqrt(x * x + T(1))
+								+ T(3) * asinh(x)));
+	}
+	if (ein < T(0.001) * egas) {
+		ein = pow(tau, fgamma_);
+	}
+
+	return ein;
+}
+
+template<class T>
+T eos::pressure_de(const T& d, const T& egas, const T& tau, const T& sx,
+		const T& sy, const T& sz) {
 	const T ek = (sx * sx + sy * sy + sz * sz) / (T(2) * d);
 	return pressure_de(d, egas, tau, ek);
+}
+
+template<class T>
+T eos::ein_de(const T& d, const T& egas, const T& tau, const T& sx,
+		const T& sy, const T& sz) {
+	const T ek = (sx * sx + sy * sy + sz * sz) / (T(2) * d);
+	return ein_de(d, egas, tau, ek);
 }
 
 #endif

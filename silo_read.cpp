@@ -313,7 +313,14 @@ int main(int argc, char* argv[]) {
 		mmw[n] += mu * dm;
 		mass[n] += dm;
 		menc[n] += dm;
-		tau[n] += vars[tau_i][i] * dx3;
+
+
+
+		tau[n] += std::pow(eos::ein_de<double>(rho, vars[egas_i][i],
+				vars[tau_i][i], sx, sy, sz),(3.0/5.0)) * dx3;
+
+
+
 		vol[n] += dx3;
 		venc[n] += dx3;
 		for (int f = 0; f < NELE; f++) {
